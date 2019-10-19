@@ -1,0 +1,195 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Wizard Staff!</title>
+
+    <style>
+        .player {
+            border: 1px solid black;
+        }
+
+        .player-col {
+            padding: 10px 0 !important;
+        }
+
+        .add-player {
+            display: block;
+            width: 100%;
+        }
+
+        .stats {
+            font-size: 0;
+            background-color: #cccccc;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .drink-total {
+            font-size: 30px;
+            line-height: 100%;
+            vertical-align: middle;
+            padding: 0 20px;
+        }
+    </style>
+
+
+</head>
+<body>
+
+    <div class="container">
+        <div class="row">
+            <div class="col player-col">
+                <button id="add-player" type="button" class="btn btn-primary add-player">
+                    Add Player!
+                </button>
+            </div>
+        </div>
+        <div class="row players" />
+    </div>
+
+    <script>
+        (() => {
+            function User(name, parent) {
+                this.Total = 0;
+
+                const Create = (name) => {
+                    let container = document.createElement('div');
+                    let header = document.createElement('h1');
+                    let statContainer = document.createElement('div');
+                    let minusButton = document.createElement('button');
+                    let plusButton = document.createElement('button');
+                    let totalSpan = document.createElement('span');
+
+                    container.classList.add('col');
+                    container.classList.add('player');
+
+                    statContainer.classList.add('stats');
+
+                    minusButton.classList.add('btn');
+                    minusButton.classList.add('btn-danger');
+                    minusButton.type = 'button';
+
+                    plusButton.classList.add('btn');
+                    plusButton.classList.add('btn-success');
+                    plusButton.type = 'button';
+
+                    totalSpan.classList.add('drink-total');
+
+                    header.innerText = name;
+                    minusButton.innerText = '-';
+                    plusButton.innerText = '+';
+                    totalSpan.innerText = 0;
+
+                    return [
+                        container, header, statContainer, minusButton, plusButton, totalSpan
+                    ]
+                }
+
+                this.Minus = () => {
+                    if (this.Total == 0) {
+                        this.totalSpan.innerText = 'ಠ_ಠ';
+                        let self = this;
+                        window.setTimeout(() => self.totalSpan.innerText = self.Total, 1000);
+                    }
+                    else {
+                        this.Total--;
+                        this.totalSpan.innerText = this.Total;
+
+                        fetch('/api/values', {
+                            method: 'put',
+                            body: '{Name:"' + this.header.innerText + '", Drinks:' + this.Total + '}',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                    }
+                };
+
+                this.Plus = () => {
+                    this.Total++;
+                    this.totalSpan.innerText = this.Total;
+
+                    fetch('/api/values', {
+                        method: 'put',
+                        body: '{Name:"' + this.header.innerText + '", Drinks:' + this.Total + '}',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                };
+
+                this.SetDrinks = (drinks) => {
+                    this.Total = drinks;
+                    this.totalSpan.innerText = this.Total;
+                };
+
+                [this.container, this.header, this.statContainer, this.minusButton, this.plusButton, this.totalSpan] = Create(name);
+
+                this.minusButton.addEventListener('click', this.Minus.bind(this));
+                this.plusButton.addEventListener('click', this.Plus.bind(this));
+
+                this.statContainer.appendChild(this.minusButton);
+                this.statContainer.appendChild(this.totalSpan);
+                this.statContainer.appendChild(this.plusButton);
+
+                this.container.appendChild(this.header);
+                this.container.appendChild(this.statContainer);
+
+                parent.appendChild(this.container);
+            };
+
+            const CreateBreak = (parentElement) => {
+                let div = document.createElement('div');
+                div.classList.add('w-100');
+                parentElement.appendChild(div);
+            };
+
+            const parentElement = document.querySelector('.players');
+            const players = [];
+            const AddPlayer = (name) => {
+                if (!name) {
+                    name = window.prompt("Welcome wizard. What shall we call you?");
+
+                    fetch('/api/values', {
+                        method: 'post',
+                        body: '{Name:"' + name + '", Drinks:0}',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+
+                if (players.length > 0 && players.length % 3 == 0) {
+                    CreateBreak(parentElement);
+                }
+
+                let user = [];
+                user[name] = new User(name, parentElement);
+                players.push(user);
+
+                return user[name];
+            };
+
+            document.getElementById('add-player')
+                .addEventListener('click', AddPlayer.bind(null, null));
+
+            fetch('/api/values')
+                .then(response => response.json().then(users => {
+                    for(var idx in users)
+                    {
+                        var player = AddPlayer(users[idx].name);
+                        player.SetDrinks(users[idx].drinks);
+                    }
+                }));
+        })();
+    </script>
+</body>
+</html>
+
